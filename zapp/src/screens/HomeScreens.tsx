@@ -25,12 +25,15 @@ export default function HomeScreen() {
           resizeMode="cover"
         >
           <View style={styles.buttonContainer}>
-            
+
             <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>INICIAR</Text>
+              <Text style={styles.buttonText}
+                onPress={() => navigation.navigate("LoginUser")}
+              >INICIAR</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("RegisterUser")}>
+            <TouchableOpacity style={styles.button}
+              onPress={() => navigation.navigate("RegisterUser")}>
               <Text style={styles.buttonText}>CADASTRAR</Text>
             </TouchableOpacity>
 

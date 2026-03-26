@@ -1,48 +1,40 @@
-import { useNavigation } from "@react-navigation/native";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { ref, set } from "firebase/database";
 import { useState } from "react";
-import { ImageBackground, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { auth, database } from "../../services/connectionFirebase";
+import {
+    ImageBackground,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
 
-export default function RegisterUser() {
-    const navigation: any = useNavigation();
+import { auth } from "../../services/connectionFirebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigation } from "@react-navigation/native";
 
-    const handleHomeScreens = () => {
-        navigation.goBack();
-    };
-
-    const [name, setName] = useState("");
-    const [cellphone, setCellphone] = useState("");
+export default function LoginUser() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const handleRegister = async () => {
+
+    const navigation: any = useNavigation();
+
+    const handleLogin = async () => {
         try {
-            // cria usuário no Auth
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                email,
-                password
-            );
+            await signInWithEmailAndPassword(auth, email, password);
 
-            const user = userCredential.user;
-
-            // salva dados no Realtime Database
-            await set(ref(database, "users/" + user.uid), {
-                name: name,
-                cellphone: cellphone,
-                email: email,
-            });
-
-            alert("Usuário cadastrado com sucesso!");
+            // vai pra tela do usuário
+            navigation.navigate("UserHome");
 
         } catch (error: any) {
             alert("Erro: " + error.message);
         }
     };
-
+    
+    const handleHomeScreens = () => {
+        navigation.goBack();
+    };
     return (
-
         <SafeAreaView style={styles.container}>
             <ImageBackground
                 source={require("../../assets/images/fundo.png")}
@@ -50,14 +42,26 @@ export default function RegisterUser() {
                 resizeMode="cover"
             >
                 <View style={styles.card}>
-                    <TextInput placeholder="Nome" style={styles.input} value={name} onChangeText={setName} />
-                    <TextInput placeholder="Celular" style={styles.input} value={cellphone} onChangeText={setCellphone} keyboardType="phone-pad" />
-                    <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-                    <TextInput placeholder="Senha" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry />
+                    <TextInput
+                        placeholder="Email"
+                        style={styles.input}
+                        value={email}
+                        onChangeText={setEmail}
+                    />
+
+                    <TextInput
+                        placeholder="Senha"
+                        style={styles.input}
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                    />
                 </View>
+
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                        <Text style={styles.buttonText}>SALVAR</Text>
+                    <TouchableOpacity style={styles.button}
+                        onPress={handleLogin}>
+                        <Text style={styles.buttonText}>ENTRAR</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button}
                         onPress={handleHomeScreens}>
