@@ -9,9 +9,9 @@ import {
     View
 } from "react-native";
 
-import { auth } from "../../services/connectionFirebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../services/connectionFirebase";
 
 export default function LoginUser() {
     const [email, setEmail] = useState("");
@@ -23,14 +23,14 @@ export default function LoginUser() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
 
-            // vai pra tela do usuário
+
             navigation.navigate("UserHome");
 
         } catch (error: any) {
             alert("Erro: " + error.message);
         }
     };
-    
+
     const handleHomeScreens = () => {
         navigation.goBack();
     };

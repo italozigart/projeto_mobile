@@ -1,10 +1,15 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import {
     ImageBackground,
     SafeAreaView,
-    StyleSheet
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function UserHome() {
+    const navigation: any = useNavigation();
     return (
         <SafeAreaView style={styles.container}>
             <ImageBackground
@@ -12,6 +17,25 @@ export default function UserHome() {
                 style={styles.image}
                 resizeMode="cover"
             >
+                <TouchableOpacity
+                    style={styles.logoutButton}
+                    onPress={() => navigation.navigate("HomeScreen")}
+                >
+                    <Ionicons name="log-out-outline" size={28} color="#fff" />
+                </TouchableOpacity>
+
+                <View style={styles.footer}>
+                    <TouchableOpacity style={styles.button}>
+                        <Ionicons name="home" size={30} color="#fff" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("UserPerfil")}
+                    >
+                        <Ionicons name="person" size={30} color="#fff" />
+                    </TouchableOpacity>
+                </View>
             </ImageBackground>
         </SafeAreaView>
     );
@@ -23,5 +47,26 @@ const styles = StyleSheet.create({
         flex: 1,
         width: "100%",
         height: "100%",
+        justifyContent: "flex-end",
+    },
+    footer: {
+        width: "100%",
+        flexDirection: "row",
+        justifyContent: "space-around",
+        alignItems: "center",
+        paddingVertical: 15,
+        backgroundColor: "rgba(0, 0, 0, 0.35)",
+    },
+    button: {
+        padding: 10,
+    },
+    logoutButton: {
+        position: "absolute",
+        top: 40,
+        left: 20,
+        zIndex: 10,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        padding: 10,
+        borderRadius: 20,
     },
 });
