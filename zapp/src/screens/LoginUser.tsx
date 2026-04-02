@@ -6,7 +6,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 
 import { useNavigation } from "@react-navigation/native";
@@ -14,19 +14,23 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../services/connectionFirebase";
 
 export default function LoginUser() {
+    //estados que guardam os valores digitados nos inputs usando useStates
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    //hook de navegação
     const navigation: any = useNavigation();
 
+    //função executada ao clicar em ENTRAR
     const handleLogin = async () => {
         try {
+            //tenta autenticar o usuário no FB
             await signInWithEmailAndPassword(auth, email, password);
 
-
+            //se o login der certo, vai pra a tela principal do usuário
             navigation.navigate("UserHome");
-
         } catch (error: any) {
+            //se der erro, mostra a mensagem
             alert("Erro: " + error.message);
         }
     };
@@ -34,6 +38,7 @@ export default function LoginUser() {
     const handleHomeScreens = () => {
         navigation.goBack();
     };
+
     return (
         <SafeAreaView style={styles.container}>
             <ImageBackground
@@ -54,17 +59,19 @@ export default function LoginUser() {
                         style={styles.input}
                         value={password}
                         onChangeText={setPassword}
-                        secureTextEntry
+                        secureTextEntry //esconde os caracteres da senha
                     />
                 </View>
 
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button}
-                        onPress={handleLogin}>
+                    <TouchableOpacity style={styles.button} onPress={handleLogin}>
                         <Text style={styles.buttonText}>ENTRAR</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.button}
-                        onPress={handleHomeScreens}>
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleHomeScreens}
+                    >
                         <Text style={styles.buttonText}>VOLTAR</Text>
                     </TouchableOpacity>
                 </View>
@@ -84,7 +91,7 @@ const styles = StyleSheet.create({
         width: "100%",
         padding: 10,
         borderRadius: 10,
-        elevation: 10
+        elevation: 10,
     },
     input: {
         width: "100%",
@@ -95,7 +102,7 @@ const styles = StyleSheet.create({
         borderColor: "#B8860B",
         borderRadius: 8,
         paddingHorizontal: 10,
-        marginBottom: 12
+        marginBottom: 12,
     },
     image: {
         flex: 1,

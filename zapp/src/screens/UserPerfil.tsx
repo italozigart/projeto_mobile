@@ -1,3 +1,5 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { getAuth } from "firebase/auth"; //importando módulo de autenticação
 import { getDatabase, onValue, ref } from "firebase/database"; //importando funções do Realtime DB
 import { useEffect, useState } from "react"; //importando Hooks que controlam estado e ciclo de vida
@@ -6,10 +8,12 @@ import {
     SafeAreaView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 
 export default function UserPerfil() {
+    const navigation: any = useNavigation();
     //armazenará os dados
     const [userData, setUserData] = useState<any>(null);
 
@@ -62,6 +66,27 @@ export default function UserPerfil() {
                         </Text>
                     </View>
                 </View>
+                <TouchableOpacity
+                    style={styles.logoutButton}
+                    onPress={() => navigation.navigate("HomeScreen")}
+                >
+                    <Ionicons name="log-out-outline" size={28} color="#fff" />
+                </TouchableOpacity>
+                <View style={styles.footer}>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("UserHome")}
+                    >
+                        <Ionicons name="home" size={30} color="#fff" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("UserPerfil")}
+                    >
+                        <Ionicons name="person" size={30} color="#fff" />
+                    </TouchableOpacity>
+                </View>
             </ImageBackground>
         </SafeAreaView>
     );
@@ -111,5 +136,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
         color: "#000",
+    },
+    footer: {
+        width: "100%",
+        flexDirection: "row",
+        justifyContent: "space-around",
+        alignItems: "center",
+        paddingVertical: 15,
+        backgroundColor: "rgba(0, 0, 0, 0.35)",
+    },
+    button: {
+        padding: 10,
+    },
+    logoutButton: {
+        position: "absolute",
+        top: 40,
+        left: 20,
+        zIndex: 10,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        padding: 10,
+        borderRadius: 20,
     },
 });

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons"; //importando ícones usados na interface
 import { useNavigation } from "@react-navigation/native";
 import {
     ImageBackground,
@@ -9,7 +9,9 @@ import {
 } from "react-native";
 
 export default function UserHome() {
+
     const navigation: any = useNavigation();
+
     return (
         <SafeAreaView style={styles.container}>
             <ImageBackground
@@ -17,6 +19,7 @@ export default function UserHome() {
                 style={styles.image}
                 resizeMode="cover"
             >
+                {/*botão no topo pra deslogar e retornar pra tela inicial */}
                 <TouchableOpacity
                     style={styles.logoutButton}
                     onPress={() => navigation.navigate("HomeScreen")}
@@ -24,11 +27,14 @@ export default function UserHome() {
                     <Ionicons name="log-out-outline" size={28} color="#fff" />
                 </TouchableOpacity>
 
+                {/*menu inferior*/}
                 <View style={styles.footer}>
+                    {/*botão HOME sem ação pois ele é usado em outra tela pra voltar pra eszsa rsrs*/}
                     <TouchableOpacity style={styles.button}>
                         <Ionicons name="home" size={30} color="#fff" />
                     </TouchableOpacity>
 
+                    {/*vai para tela de perfil*/}
                     <TouchableOpacity
                         style={styles.button}
                         onPress={() => navigation.navigate("UserPerfil")}
