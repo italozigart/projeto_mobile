@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons"; //importando ícones usados na interface
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import {
     ImageBackground,
@@ -29,9 +29,25 @@ export default function UserHome() {
 
                 {/*menu inferior*/}
                 <View style={styles.footer}>
-                    {/*botão HOME sem ação pois ele é usado em outra tela pra voltar pra eszsa rsrs*/}
+                    {/*botão HOME sem ação pois ele é usado em outra tela pra voltar pra essa rsrs*/}
                     <TouchableOpacity style={styles.button}>
                         <Ionicons name="home" size={30} color="#fff" />
+                    </TouchableOpacity>
+
+                    {/*vai para tela de cadastro de produto*/}
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("RegisterProduct")}
+                    >
+                        <Ionicons name="add-circle-outline" size={30} color="#fff" />
+                    </TouchableOpacity>
+
+                    {/*vai para tela de listagem de produtos*/}
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("ProductList")}
+                    >
+                        <Ionicons name="list-outline" size={30} color="#fff" />
                     </TouchableOpacity>
 
                     {/*vai para tela de perfil*/}
