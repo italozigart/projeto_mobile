@@ -1,7 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { ref, push } from "firebase/database";
-import { useState } from "react";
+import { push, ref } from "firebase/database";
+import { useRef, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
+    Animated,
     ImageBackground,
     SafeAreaView,
     StyleSheet,
@@ -16,21 +20,48 @@ export default function RegisterProduct() {
 
     const navigation: any = useNavigation();
 
-    //estados que armazenam os dados digitados
     const [nome, setNome] = useState("");
     const [traducao, setTraducao] = useState("");
     const [editora, setEditora] = useState("");
     const [imagem, setImagem] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    //volta pra tela anterior clicando em voltar
+    //mensagem atual do toast
+    const [toastMessage, setToastMessage] = useState("");
+
+    //opacidade animada do toast
+    const toastOpacity = useRef(new Animated.Value(0)).current;
+
+    //exibe toast verde por 2.5s — mesmo padrão do ProductList
+    const showToast = (message: string) => {
+        setToastMessage(message);
+
+        Animated.timing(toastOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setTimeout(() => {
+                Animated.timing(toastOpacity, {
+                    toValue: 0,
+                    duration: 500,
+                    useNativeDriver: true,
+                }).start(() => {
+                    //navega para UserHome somente após o toast desaparecer
+                    navigation.navigate("UserHome");
+                });
+            }, 2500);
+        });
+    };
+
     const handleGoBack = () => {
         navigation.goBack();
     };
 
-    //função assíncrona executada ao cadastrar produto
     const handleRegisterProduct = async () => {
+        setLoading(true);
+
         try {
-            //salva produto no Firebase Realtime Database
             await push(ref(database, "products"), {
                 nome: nome,
                 traducao: traducao,
@@ -38,18 +69,18 @@ export default function RegisterProduct() {
                 imagem: imagem,
             });
 
-            alert("Produto cadastrado com sucesso!");
-
             //limpa os campos após salvar
             setNome("");
             setTraducao("");
             setEditora("");
             setImagem("");
 
-            //volta pra UserHome após salvar
-            navigation.navigate("UserHome");
+            //exibe toast e navega ao final dele
+            showToast("Produto cadastrado com sucesso!");
         } catch (error: any) {
-            alert("Erro: " + error.message);
+            Alert.alert("Erro", error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -60,6 +91,12 @@ export default function RegisterProduct() {
                 style={styles.image}
                 resizeMode="cover"
             >
+                {/*toast verde — aparece após cadastro bem-sucedido*/}
+                <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                    <Text style={styles.toastText}>{toastMessage}</Text>
+                </Animated.View>
+
                 <View style={styles.card}>
                     <TextInput
                         placeholder="Nome"
@@ -92,13 +129,21 @@ export default function RegisterProduct() {
                 </View>
 
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={handleRegisterProduct}>
-                        <Text style={styles.buttonText}>SALVAR</Text>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleRegisterProduct}
+                        disabled={loading}
+                    >
+                        {loading
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : <Text style={styles.buttonText}>SALVAR</Text>
+                        }
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.button}
                         onPress={handleGoBack}
+                        disabled={loading}
                     >
                         <Text style={styles.buttonText}>VOLTAR</Text>
                     </TouchableOpacity>
@@ -152,6 +197,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 30,
         borderRadius: 25,
         width: "100%",
+        alignItems: "center",
     },
     buttonText: {
         color: "white",
@@ -159,5 +205,28 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         textAlign: "center",
         fontFamily: "Jomhuria",
+    },
+    //toast verde — mesmo padrão do LoginUser e ProductList
+    toast: {
+        position: "absolute",
+        top: 60,
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#2e7d32",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        gap: 8,
+        zIndex: 99,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    toastText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "bold",
     },
 });

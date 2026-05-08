@@ -3,8 +3,11 @@ import { useNavigation } from "@react-navigation/native";
 import { onValue, ref, remove, update } from "firebase/database";
 import { useEffect, useState } from "react";
 import {
+    ActivityIndicator, //spinner de carregamento da lista
     Alert,
+    Animated, //animação fade dos toasts
     FlatList,
+    Image,
     ImageBackground,
     Modal,
     SafeAreaView,
@@ -14,9 +17,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useRef } from "react";
 import { database } from "../../services/connectionFirebase";
 
-//tipagem do produto alinhada com o que é salvo no RegisterProduct
 interface Product {
     id: string;
     nome: string;
@@ -29,42 +32,64 @@ export default function ProductList() {
 
     const navigation: any = useNavigation();
 
-    //lista de produtos carregada do Firebase
     const [products, setProducts] = useState<Product[]>([]);
-
-    //controla se o modal de edição está visível
     const [modalVisible, setModalVisible] = useState(false);
-
-    //produto que está sendo editado no momento
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-    //estados dos campos do formulário de edição
     const [nome, setNome] = useState("");
     const [traducao, setTraducao] = useState("");
     const [editora, setEditora] = useState("");
     const [imagem, setImagem] = useState("");
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+    //controla se a lista ainda está sendo carregada do Firebase
+    const [loadingList, setLoadingList] = useState(true);
+
+    //controla loading do botão salvar no modal de edição
+    const [loadingSave, setLoadingSave] = useState(false);
+
+    //mensagem atual do toast
+    const [toastMessage, setToastMessage] = useState("");
+
+    //opacidade animada do toast
+    const toastOpacity = useRef(new Animated.Value(0)).current;
+
+    //exibe um toast verde com a mensagem recebida por 3s e some com fade
+    const showToast = (message: string) => {
+        setToastMessage(message);
+
+        //fade in em 300ms
+        Animated.timing(toastOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            //aguarda 2.5s visível e depois fade out em 500ms
+            setTimeout(() => {
+                Animated.timing(toastOpacity, {
+                    toValue: 0,
+                    duration: 500,
+                    useNativeDriver: true,
+                }).start();
+            }, 2500);
+        });
+    };
 
     useEffect(() => {
-        //escuta em tempo real o nó "products" no Firebase
         const productsRef = ref(database, "products");
 
         const unsubscribe = onValue(productsRef, (snapshot) => {
             const data = snapshot.val();
             const list: Product[] = [];
-
-            //converte o objeto do Firebase em array com id
             for (let id in data) {
                 list.push({ id, ...data[id] });
             }
-
             setProducts(list);
+            setLoadingList(false); //lista recebida — encerra o carregando
         });
 
-        //cancela a escuta ao sair da tela
         return () => unsubscribe();
     }, []);
 
-    //abre o modal preenchendo os campos com os dados do produto selecionado
     const handleOpenEdit = (product: Product) => {
         setSelectedProduct(product);
         setNome(product.nome);
@@ -74,9 +99,10 @@ export default function ProductList() {
         setModalVisible(true);
     };
 
-    //salva as alterações no Firebase
     const handleSaveEdit = async () => {
         if (!selectedProduct) return;
+
+        setLoadingSave(true); //ativa loading no botão salvar
 
         try {
             await update(ref(database, "products/" + selectedProduct.id), {
@@ -85,40 +111,41 @@ export default function ProductList() {
                 editora: editora,
                 imagem: imagem,
             });
-
-            Alert.alert("Sucesso", "Produto atualizado com sucesso.");
             setModalVisible(false);
+            showToast("Produto atualizado com sucesso!"); //toast de edição
         } catch (error: any) {
-            Alert.alert("Erro", "Não foi possível atualizar o produto.");
+            Alert.alert("Erro", error.message);
+        } finally {
+            setLoadingSave(false); //desativa loading sempre ao final
         }
     };
 
-    //confirma antes de excluir
-    const handleDelete = (id: string) => {
-        Alert.alert(
-            "Excluir produto",
-            "Tem certeza que deseja excluir este produto?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Excluir",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await remove(ref(database, "products/" + id));
-                            Alert.alert("Sucesso", "Produto excluído.");
-                        } catch (error: any) {
-                            Alert.alert("Erro", "Não foi possível excluir o produto.");
-                        }
-                    },
-                },
-            ]
-        );
+    const handleConfirmDelete = async (id: string) => {
+        try {
+            await remove(ref(database, "products/" + id));
+            setConfirmDeleteId(null);
+            showToast("Produto excluído com sucesso!"); //toast de exclusão
+        } catch (error: any) {
+            Alert.alert("Erro ao excluir", error.message);
+            setConfirmDeleteId(null);
+        }
     };
 
-    //renderiza cada item da lista
     const renderItem = ({ item }: { item: Product }) => (
         <View style={styles.productCard}>
+
+            {item.imagem ? (
+                <Image
+                    source={{ uri: item.imagem }}
+                    style={styles.productImage}
+                    resizeMode="cover"
+                />
+            ) : (
+                <View style={styles.productImagePlaceholder}>
+                    <Ionicons name="image-outline" size={24} color="#ccc" />
+                </View>
+            )}
+
             <View style={styles.productInfo}>
                 <Text style={styles.productNome}>{item.nome}</Text>
                 <Text style={styles.productDetail}>Tradução: {item.traducao}</Text>
@@ -126,21 +153,38 @@ export default function ProductList() {
             </View>
 
             <View style={styles.productActions}>
-                {/*botão editar*/}
-                <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => handleOpenEdit(item)}
-                >
-                    <Ionicons name="pencil-outline" size={20} color="#B8860B" />
-                </TouchableOpacity>
+                {confirmDeleteId === item.id ? (
+                    <View style={styles.confirmRow}>
+                        <TouchableOpacity
+                            style={styles.confirmYes}
+                            onPress={() => handleConfirmDelete(item.id)}
+                        >
+                            <Ionicons name="checkmark" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.confirmNo}
+                            onPress={() => setConfirmDeleteId(null)}
+                        >
+                            <Ionicons name="close" size={18} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <>
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={() => handleOpenEdit(item)}
+                        >
+                            <Ionicons name="pencil-outline" size={20} color="#B8860B" />
+                        </TouchableOpacity>
 
-                {/*botão excluir*/}
-                <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDelete(item.id)}
-                >
-                    <Ionicons name="trash-outline" size={20} color="#cc0000" />
-                </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => setConfirmDeleteId(item.id)}
+                        >
+                            <Ionicons name="trash-outline" size={20} color="#cc0000" />
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
         </View>
     );
@@ -152,7 +196,6 @@ export default function ProductList() {
                 style={styles.image}
                 resizeMode="cover"
             >
-                {/*botão logout no topo*/}
                 <TouchableOpacity
                     style={styles.logoutButton}
                     onPress={() => navigation.navigate("HomeScreen")}
@@ -160,12 +203,23 @@ export default function ProductList() {
                     <Ionicons name="log-out-outline" size={28} color="#fff" />
                 </TouchableOpacity>
 
-                {/*área central com a lista*/}
+                {/*toast verde — aparece após qualquer ação bem-sucedida*/}
+                <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                    <Text style={styles.toastText}>{toastMessage}</Text>
+                </Animated.View>
+
                 <View style={styles.content}>
                     <View style={styles.listContainer}>
                         <Text style={styles.title}>Produtos</Text>
 
-                        {products.length === 0 ? (
+                        {/*exibe spinner enquanto o Firebase não respondeu ainda*/}
+                        {loadingList ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color="#B8860B" />
+                                <Text style={styles.loadingText}>Carregando produtos...</Text>
+                            </View>
+                        ) : products.length === 0 ? (
                             <Text style={styles.emptyText}>Nenhum produto cadastrado.</Text>
                         ) : (
                             <FlatList
@@ -178,7 +232,6 @@ export default function ProductList() {
                     </View>
                 </View>
 
-                {/*footer igual ao UserPerfil*/}
                 <View style={styles.footer}>
                     <TouchableOpacity
                         style={styles.button}
@@ -207,7 +260,6 @@ export default function ProductList() {
                 </View>
             </ImageBackground>
 
-            {/*modal de edição*/}
             <Modal
                 visible={modalVisible}
                 transparent
@@ -248,16 +300,22 @@ export default function ProductList() {
                         />
 
                         <View style={styles.modalButtons}>
+                            {/*botão salvar com loading durante o update*/}
                             <TouchableOpacity
                                 style={styles.button2}
                                 onPress={handleSaveEdit}
+                                disabled={loadingSave}
                             >
-                                <Text style={styles.buttonText}>SALVAR</Text>
+                                {loadingSave
+                                    ? <ActivityIndicator size="small" color="#fff" />
+                                    : <Text style={styles.buttonText}>SALVAR</Text>
+                                }
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 style={[styles.button2, styles.cancelButton]}
                                 onPress={() => setModalVisible(false)}
+                                disabled={loadingSave}
                             >
                                 <Text style={styles.buttonText}>CANCELAR</Text>
                             </TouchableOpacity>
@@ -282,7 +340,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        paddingTop: 80, //espaço pro botão de logout
+        paddingTop: 80,
     },
 
     listContainer: {
@@ -305,6 +363,19 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 
+    //container do spinner de carregamento da lista
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 12,
+    },
+
+    loadingText: {
+        color: "#B8860B",
+        fontSize: 14,
+    },
+
     emptyText: {
         textAlign: "center",
         color: "#999",
@@ -314,11 +385,30 @@ const styles = StyleSheet.create({
 
     productCard: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
         borderBottomWidth: 1,
         borderBottomColor: "#eee",
         paddingVertical: 12,
+        gap: 10,
+    },
+
+    productImage: {
+        width: 56,
+        height: 56,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#eee",
+    },
+
+    productImagePlaceholder: {
+        width: 56,
+        height: 56,
+        borderRadius: 8,
+        backgroundColor: "#f5f5f5",
+        borderWidth: 1,
+        borderColor: "#eee",
+        justifyContent: "center",
+        alignItems: "center",
     },
 
     productInfo: {
@@ -339,7 +429,8 @@ const styles = StyleSheet.create({
 
     productActions: {
         flexDirection: "row",
-        gap: 12,
+        gap: 8,
+        alignItems: "center",
     },
 
     editButton: {
@@ -347,6 +438,24 @@ const styles = StyleSheet.create({
     },
 
     deleteButton: {
+        padding: 6,
+    },
+
+    confirmRow: {
+        flexDirection: "row",
+        gap: 6,
+        alignItems: "center",
+    },
+
+    confirmYes: {
+        backgroundColor: "#cc0000",
+        borderRadius: 6,
+        padding: 6,
+    },
+
+    confirmNo: {
+        backgroundColor: "#888",
+        borderRadius: 6,
         padding: 6,
     },
 
@@ -373,7 +482,31 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
 
-    //modal
+    //toast verde igual ao do LoginUser
+    toast: {
+        position: "absolute",
+        top: 60,
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#2e7d32",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        gap: 8,
+        zIndex: 99,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+
+    toastText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "bold",
+    },
+
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
@@ -422,6 +555,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 30,
         borderRadius: 25,
         width: "100%",
+        alignItems: "center",
     },
 
     cancelButton: {

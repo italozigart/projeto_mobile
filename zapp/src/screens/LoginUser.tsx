@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation, useRoute } from "@react-navigation/native"; //useRoute lê os params da navegação
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator, //ícone de carregando nativo do React Native
-    Alert,
-    Animated, //usado para a animação de fade do toast
+    ActivityIndicator,
+    Animated,
     ImageBackground,
     SafeAreaView,
     StyleSheet,
@@ -22,36 +21,41 @@ export default function LoginUser() {
     const [showPassword, setShowPassword] = useState(false);
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
-
-    //controla o estado de carregamento durante a chamada ao Firebase
     const [loading, setLoading] = useState(false);
 
     const navigation: any = useNavigation();
-    const route: any = useRoute(); //lê os params recebidos na navegação
+    const route: any = useRoute();
 
-    //valor animado que controla a opacidade do toast (começa invisível)
+    //toast — cor e mensagem configuráveis igual ao restante do sistema
+    const [toastMessage, setToastMessage] = useState("");
+    const [toastColor, setToastColor] = useState("#2e7d32");
     const toastOpacity = useRef(new Animated.Value(0)).current;
 
+    const showToast = (message: string, color: string = "#2e7d32") => {
+        setToastMessage(message);
+        setToastColor(color);
+
+        Animated.timing(toastOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setTimeout(() => {
+                Animated.timing(toastOpacity, {
+                    toValue: 0,
+                    duration: 500,
+                    useNativeDriver: true,
+                }).start();
+            }, 2500);
+        });
+    };
+
     useEffect(() => {
-        //só exibe o toast se vier da tela de cadastro
+        //exibe toast verde se vier do cadastro
         if (route.params?.fromRegister) {
-            //fade in em 400ms
-            Animated.timing(toastOpacity, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }).start(() => {
-                //aguarda 4s visível e depois fade out em 600ms
-                setTimeout(() => {
-                    Animated.timing(toastOpacity, {
-                        toValue: 0,
-                        duration: 600,
-                        useNativeDriver: true,
-                    }).start();
-                }, 4000);
-            });
+            showToast("Cadastro realizado com sucesso!", "#2e7d32");
         }
-    }, []); //executa uma vez ao montar a tela
+    }, []);
 
     const validate = () => {
         let valid = true;
@@ -72,24 +76,43 @@ export default function LoginUser() {
         return valid;
     };
 
+    //traduz os códigos de erro do Firebase para mensagens amigáveis em português
+    const getFirebaseErrorMessage = (code: string) => {
+        switch (code) {
+            case "auth/user-not-found":
+                return "Email não cadastrado.";
+            case "auth/wrong-password":
+                return "Senha incorreta.";
+            case "auth/invalid-email":
+                return "Email inválido.";
+            case "auth/invalid-credential":
+                return "Email ou senha incorretos.";
+            case "auth/too-many-requests":
+                return "Muitas tentativas. Tente novamente mais tarde.";
+            case "auth/user-disabled":
+                return "Esta conta foi desativada.";
+            default:
+                return "Erro ao entrar. Verifique seus dados.";
+        }
+    };
+
     const handleLogin = async () => {
         if (!validate()) return;
 
-        setLoading(true); //ativa o carregando antes de chamar o Firebase
+        setLoading(true);
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
             navigation.navigate("UserHome");
         } catch (error: any) {
-            Alert.alert("Erro ao entrar", error.message);
+            //toast vermelho com mensagem amigável traduzida do código Firebase
+            showToast(getFirebaseErrorMessage(error.code), "#cc0000");
         } finally {
-            setLoading(false); //desativa o carregando sempre ao final, com sucesso ou erro
+            setLoading(false);
         }
     };
 
-    const handleHomeScreens = () => {
-        navigation.goBack();
-    };
+    const handleHomeScreens = () => navigation.goBack();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -98,10 +121,14 @@ export default function LoginUser() {
                 style={styles.image}
                 resizeMode="cover"
             >
-                {/*toast verde — só aparece quando fromRegister é true */}
-                <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
-                    <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                    <Text style={styles.toastText}>Cadastro realizado com sucesso!</Text>
+                {/*toast — verde para sucesso do cadastro, vermelho para erros de login*/}
+                <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: toastColor }]}>
+                    <Ionicons
+                        name={toastColor === "#2e7d32" ? "checkmark-circle-outline" : "alert-circle-outline"}
+                        size={18}
+                        color="#fff"
+                    />
+                    <Text style={styles.toastText}>{toastMessage}</Text>
                 </Animated.View>
 
                 <View style={styles.card}>
@@ -146,11 +173,10 @@ export default function LoginUser() {
                 </View>
 
                 <View style={styles.buttonContainer}>
-                    {/*botão ENTRAR — exibe ActivityIndicator no lugar do texto durante o loading*/}
                     <TouchableOpacity
                         style={styles.button}
                         onPress={handleLogin}
-                        disabled={loading} //bloqueia novo clique enquanto carrega
+                        disabled={loading}
                     >
                         {loading
                             ? <ActivityIndicator size="small" color="#fff" />
@@ -161,7 +187,7 @@ export default function LoginUser() {
                     <TouchableOpacity
                         style={styles.button}
                         onPress={handleHomeScreens}
-                        disabled={loading} //bloqueia voltar também enquanto carrega
+                        disabled={loading}
                     >
                         <Text style={styles.buttonText}>VOLTAR</Text>
                     </TouchableOpacity>
@@ -243,7 +269,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 30,
         borderRadius: 25,
         width: "100%",
-        alignItems: "center", //centraliza o ActivityIndicator horizontalmente
+        alignItems: "center",
     },
     buttonText: {
         color: "white",
@@ -252,14 +278,12 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontFamily: "Jomhuria",
     },
-    //toast verde discreto no topo da tela
     toast: {
         position: "absolute",
         top: 60,
         alignSelf: "center",
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#2e7d32",
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 20,

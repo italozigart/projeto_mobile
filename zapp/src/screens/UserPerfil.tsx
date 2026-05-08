@@ -1,73 +1,95 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { getAuth } from "firebase/auth"; //importando módulo de autenticação do Firebase
-import { getDatabase, onValue, ref, update } from "firebase/database"; //importando funções do Realtime Database
-import { TextInputMask } from "react-native-masked-text"; //importando campo com máscara para telefone
-import { useEffect, useState } from "react"; //importando hooks de estado e ciclo de vida
+import { getAuth } from "firebase/auth";
+import { getDatabase, onValue, ref, update } from "firebase/database";
+import { TextInputMask } from "react-native-masked-text";
+import { useEffect, useRef, useState } from "react";
 import {
-    Alert, //exibe mensagens popup na tela
+    ActivityIndicator,
+    Animated,
     ImageBackground,
     SafeAreaView,
     StyleSheet,
     Text,
-    TextInput, //campo de texto editável
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
 
 export default function UserPerfil() {
-    const navigation: any = useNavigation(); //controla navegação entre telas
+    const navigation: any = useNavigation();
 
-    const auth = getAuth(); //inicializa autenticação Firebase
-    const user = auth.currentUser; //captura usuário logado atualmente
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-    //estado que armazena dados completos do usuário vindos do Firebase
     const [userData, setUserData] = useState<any>(null);
-
-    //estados editáveis dos campos do formulário
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [cellphone, setCellPhone] = useState("");
 
-    useEffect(() => {
-        //executa ao abrir a tela
-        if (user) {
-            //só busca dados se houver usuário logado
+    //loading do botão salvar
+    const [loading, setLoading] = useState(false);
 
-            const db = getDatabase(); //obtém instância do banco
-            const userRef = ref(db, "users/" + user.uid); //aponta para caminho do usuário no banco
+    //toast — mesma lógica do restante do sistema
+    const [toastMessage, setToastMessage] = useState("");
+    const [toastColor, setToastColor] = useState("#2e7d32");
+    const toastOpacity = useRef(new Animated.Value(0)).current;
+
+    const showToast = (message: string, color: string = "#2e7d32") => {
+        setToastMessage(message);
+        setToastColor(color);
+
+        Animated.timing(toastOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setTimeout(() => {
+                Animated.timing(toastOpacity, {
+                    toValue: 0,
+                    duration: 500,
+                    useNativeDriver: true,
+                }).start();
+            }, 2500);
+        });
+    };
+
+    useEffect(() => {
+        if (user) {
+            const db = getDatabase();
+            const userRef = ref(db, "users/" + user.uid);
 
             onValue(userRef, (snapshot) => {
-                //escuta alterações em tempo real no Firebase
-                const data = snapshot.val(); //captura dados retornados
-
-                setUserData(data); //salva objeto completo no estado
-
-                //preenche os campos editáveis com os dados carregados
+                const data = snapshot.val();
+                setUserData(data);
                 setName(data?.name || "");
                 setEmail(user.email || "");
                 setCellPhone(data?.cellphone || "");
             });
         }
-    }, []); //array vazio = executa apenas uma vez ao abrir
+    }, []);
 
     async function handleUpdateProfile() {
-        //função chamada ao clicar em salvar alterações
-        if (user) {
-            try {
-                const db = getDatabase(); //obtém banco novamente
-                const userRef = ref(db, "users/" + user.uid); //referência do usuário logado
+        if (!user) return;
 
-                await update(userRef, {
-                    //atualiza apenas os campos abaixo
-                    name: name,
-                    cellphone: cellphone,
-                });
+        setLoading(true);
 
-                Alert.alert("Sucesso", "Dados atualizados com sucesso."); //mensagem sucesso
-            } catch (error) {
-                Alert.alert("Erro", "Não foi possível atualizar os dados."); //mensagem erro
-            }
+        try {
+            const db = getDatabase();
+            const userRef = ref(db, "users/" + user.uid);
+
+            await update(userRef, {
+                name: name,
+                cellphone: cellphone,
+            });
+
+            //toast verde de sucesso
+            showToast("Dados atualizados com sucesso!");
+        } catch (error: any) {
+            //toast vermelho de erro
+            showToast("Não foi possível atualizar os dados.", "#cc0000");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -78,6 +100,16 @@ export default function UserPerfil() {
                 style={styles.image}
                 resizeMode="cover"
             >
+                {/*toast — verde para sucesso, vermelho para erro*/}
+                <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: toastColor }]}>
+                    <Ionicons
+                        name={toastColor === "#2e7d32" ? "checkmark-circle-outline" : "alert-circle-outline"}
+                        size={18}
+                        color="#fff"
+                    />
+                    <Text style={styles.toastText}>{toastMessage}</Text>
+                </Animated.View>
+
                 <View style={styles.content}>
                     <View style={styles.card}>
                         <Text style={styles.title}>Perfil</Text>
@@ -85,39 +117,37 @@ export default function UserPerfil() {
                         <Text style={styles.label}>Nome:</Text>
                         <TextInput
                             style={styles.input}
-                            value={name} //valor atual do nome
-                            onChangeText={setName} //atualiza estado enquanto digita
+                            value={name}
+                            onChangeText={setName}
                             placeholder="Digite seu nome"
                         />
 
                         <Text style={styles.label}>Email:</Text>
                         <Text style={styles.value}>
                             {email || "Carregando..."}
-                            {/* exibe email carregado do Firebase Auth */}
                         </Text>
 
                         <Text style={styles.label}>Telefone:</Text>
                         <TextInputMask
-                            type={"cel-phone"} //define máscara celular
-                            options={{
-                                maskType: "BRL",
-                                withDDD: true,
-                                dddMask: "(99) ",
-                            }}
+                            type={"cel-phone"}
+                            options={{ maskType: "BRL", withDDD: true, dddMask: "(99) " }}
                             style={styles.input}
-                            value={cellphone} //valor atual telefone
-                            onChangeText={setCellPhone} //atualiza enquanto digita
+                            value={cellphone}
+                            onChangeText={setCellPhone}
                             placeholder="Digite seu telefone"
                             keyboardType="numeric"
                         />
 
+                        {/*botão salvar padronizado com #B8860B e loading*/}
                         <TouchableOpacity
                             style={styles.saveButton}
                             onPress={handleUpdateProfile}
+                            disabled={loading}
                         >
-                            <Text style={styles.saveButtonText}>
-                                Salvar alterações
-                            </Text>
+                            {loading
+                                ? <ActivityIndicator size="small" color="#fff" />
+                                : <Text style={styles.saveButtonText}>Salvar alterações</Text>
+                            }
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -127,7 +157,6 @@ export default function UserPerfil() {
                     onPress={() => navigation.navigate("HomeScreen")}
                 >
                     <Ionicons name="log-out-outline" size={28} color="#fff" />
-                    {/* botão logout volta para tela inicial */}
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
@@ -136,15 +165,24 @@ export default function UserPerfil() {
                         onPress={() => navigation.navigate("UserHome")}
                     >
                         <Ionicons name="home" size={30} color="#fff" />
-                        {/* botão rodapé home */}
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => navigation.navigate("UserPerfil")}
+                        onPress={() => navigation.navigate("RegisterProduct")}
                     >
+                        <Ionicons name="add-circle-outline" size={30} color="#fff" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("ProductList")}
+                    >
+                        <Ionicons name="list-outline" size={30} color="#fff" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.button}>
                         <Ionicons name="person" size={30} color="#fff" />
-                        {/* botão rodapé perfil */}
                     </TouchableOpacity>
                 </View>
             </ImageBackground>
@@ -154,94 +192,83 @@ export default function UserPerfil() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1, //ocupa tela inteira
+        flex: 1,
     },
-
     image: {
         flex: 1,
         width: "100%",
         height: "100%",
     },
-
     content: {
         flex: 1,
-        justifyContent: "center", //centraliza verticalmente
-        alignItems: "center", //centraliza horizontalmente
+        justifyContent: "center",
+        alignItems: "center",
     },
-
     card: {
         width: "85%",
         backgroundColor: "#fff",
         borderRadius: 20,
         padding: 20,
-
-        elevation: 5, //sombra Android
-        shadowColor: "#000", //sombra iOS
+        elevation: 5,
+        shadowColor: "#000",
         shadowOpacity: 0.2,
         shadowRadius: 5,
     },
-
     title: {
         fontSize: 22,
         fontWeight: "bold",
         marginBottom: 15,
         textAlign: "center",
     },
-
     label: {
         fontSize: 14,
         color: "#666",
         marginTop: 10,
         marginBottom: 5,
     },
-
     value: {
         fontSize: 16,
         fontWeight: "bold",
         color: "#000",
         marginBottom: 10,
     },
-
+    //inputs agora seguem o padrão do sistema: borda #B8860B, fundo #f5f5f5
     input: {
         width: "100%",
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-        color: "#000",
-        backgroundColor: "#f9f9f9",
+        backgroundColor: "#f5f5f5",
+        fontFamily: "Jomhuria",
+        height: 45,
+        borderWidth: 2,
+        borderColor: "#B8860B",
+        borderRadius: 8,
+        paddingHorizontal: 10,
         marginBottom: 10,
     },
-
+    //botão salvar agora segue o padrão #B8860B do sistema
     saveButton: {
         marginTop: 20,
-        backgroundColor: "#007bff",
+        backgroundColor: "#B8860B",
         paddingVertical: 12,
-        borderRadius: 10,
+        borderRadius: 25,
         alignItems: "center",
     },
-
     saveButtonText: {
         color: "#fff",
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: "bold",
+        fontFamily: "Jomhuria",
     },
-
     footer: {
         width: "100%",
-        flexDirection: "row", //organiza ícones lado a lado
+        flexDirection: "row",
         justifyContent: "space-around",
         alignItems: "center",
         paddingVertical: 15,
         backgroundColor: "rgba(0, 0, 0, 0.35)",
     },
-
     button: {
         padding: 10,
     },
-
     logoutButton: {
         position: "absolute",
         top: 40,
@@ -250,5 +277,26 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0,0,0,0.4)",
         padding: 10,
         borderRadius: 20,
+    },
+    toast: {
+        position: "absolute",
+        top: 60,
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        gap: 8,
+        zIndex: 99,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    toastText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "bold",
     },
 });
