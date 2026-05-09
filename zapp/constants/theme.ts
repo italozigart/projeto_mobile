@@ -1,53 +1,97 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+//tokens de design compartilhados por todas as telas
+//alterar aqui reflete em todo o sistema
 
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+export const COLORS = {
+    primary: "#B8860B",
+    danger: "#cc0000",
+    success: "#2e7d32",
+    cancel: "#888",
+    inputBg: "#f5f5f5",
+    white: "#fff",
+    textMuted: "#666",
+    border: "#eee",
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const FONT = {
+    family: "Jomhuria" as const,
+    sizeButton: 18,
+    sizeDetail: 13,
+    sizeLabel: 14,
+};
+
+//estilos reutilizáveis entre telas — importar e usar diretamente no StyleSheet
+export const SHARED = {
+    input: {
+        width: "100%" as const,
+        backgroundColor: "#f5f5f5",
+        fontFamily: "Jomhuria" as const,
+        height: 45,
+        borderWidth: 2,
+        borderColor: "#B8860B",
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        marginBottom: 4,
+    },
+    button: {
+        backgroundColor: "#B8860B",
+        paddingVertical: 12,
+        paddingHorizontal: 30,
+        borderRadius: 25,
+        width: "100%" as const,
+        alignItems: "center" as const,
+    },
+    buttonText: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "bold" as const,
+        textAlign: "center" as const,
+        fontFamily: "Jomhuria" as const,
+    },
+    footer: {
+        width: "100%" as const,
+        flexDirection: "row" as const,
+        justifyContent: "space-around" as const,
+        alignItems: "center" as const,
+        paddingVertical: 15,
+        backgroundColor: "rgba(0, 0, 0, 0.35)",
+    },
+    logoutButton: {
+        position: "absolute" as const,
+        top: 40,
+        left: 20,
+        zIndex: 10,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        padding: 10,
+        borderRadius: 20,
+    },
+    toast: {
+        position: "absolute" as const,
+        top: 60,
+        alignSelf: "center" as const,
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        gap: 8,
+        zIndex: 99,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    toastText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "bold" as const,
+    },
+    errorText: {
+        color: "#cc0000",
+        fontSize: 12,
+        marginBottom: 8,
+        marginLeft: 4,
+    },
+    inputError: {
+        borderColor: "#cc0000",
+    },
+};
