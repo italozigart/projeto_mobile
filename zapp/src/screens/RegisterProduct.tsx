@@ -1,10 +1,10 @@
+// RegisterProduct.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { push, ref } from "firebase/database";
 import { useRef, useState } from "react";
 import { ActivityIndicator, Animated, ImageBackground, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { database } from "../../services/connectionFirebase";
 import { SHARED } from "../../constants/theme";
+import { productService } from "../../services/products_services";
 
 export default function RegisterProduct() {
     const navigation: any = useNavigation();
@@ -12,13 +12,14 @@ export default function RegisterProduct() {
     const [traducao, setTraducao] = useState("");
     const [editora, setEditora] = useState("");
     const [imagem, setImagem] = useState("");
+    const [preco, setPreco] = useState("");
     const [loading, setLoading] = useState(false);
 
-    //erros por campo
     const [nomeError, setNomeError] = useState("");
     const [traducaoError, setTraducaoError] = useState("");
     const [editoraError, setEditoraError] = useState("");
     const [imagemError, setImagemError] = useState("");
+    const [precoError, setPrecoError] = useState("");
 
     const [toastMessage, setToastMessage] = useState("");
     const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -32,12 +33,13 @@ export default function RegisterProduct() {
 
     const validate = () => {
         let valid = true;
-        setNomeError(""); setTraducaoError(""); setEditoraError(""); setImagemError("");
+        setNomeError(""); setTraducaoError(""); setEditoraError(""); setImagemError(""); setPrecoError("");
 
         if (!nome.trim()) { setNomeError("Nome é obrigatório."); valid = false; }
         if (!traducao.trim()) { setTraducaoError("Tradução é obrigatória."); valid = false; }
         if (!editora.trim()) { setEditoraError("Editora é obrigatória."); valid = false; }
         if (!imagem.trim()) { setImagemError("URL da imagem é obrigatória."); valid = false; }
+        if (!preco.trim() || isNaN(parseFloat(preco.replace(",", ".")))) { setPrecoError("Preço válido é obrigatório."); valid = false; }
 
         return valid;
     };
@@ -47,8 +49,8 @@ export default function RegisterProduct() {
 
         setLoading(true);
         try {
-            await push(ref(database, "products"), { nome, traducao, editora, imagem });
-            setNome(""); setTraducao(""); setEditora(""); setImagem("");
+            await productService.create({ nome, traducao, editora, imagem, preco: parseFloat(preco.replace(",", ".")) });
+            setNome(""); setTraducao(""); setEditora(""); setImagem(""); setPreco("");
             showToast("Produto cadastrado com sucesso!", () => navigation.navigate("UserHome"));
         } catch (error: any) {
             showToast("Erro: " + error.message);
@@ -91,6 +93,13 @@ export default function RegisterProduct() {
                         autoCapitalize="none"
                     />
                     {imagemError ? <Text style={SHARED.errorText}>{imagemError}</Text> : null}
+
+                    <TextInput
+                        placeholder="Preço (ex: 29,90)" style={[SHARED.input, precoError ? SHARED.inputError : null]}
+                        value={preco} onChangeText={(t) => { setPreco(t); setPrecoError(""); }}
+                        keyboardType="decimal-pad"
+                    />
+                    {precoError ? <Text style={SHARED.errorText}>{precoError}</Text> : null}
                 </View>
 
                 <View style={styles.buttonContainer}>

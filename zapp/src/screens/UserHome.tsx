@@ -24,6 +24,9 @@ export default function UserHome() {
                     <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate("ProductList")}>
                         <Ionicons name="list-outline" size={30} color="#fff" />
                     </TouchableOpacity>
+                    <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate("CartScreen")}>
+                        <Ionicons name="cart-outline" size={30} color="#fff" />
+                    </TouchableOpacity>
                     <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate("UserPerfil")}>
                         <Ionicons name="person" size={30} color="#fff" />
                     </TouchableOpacity>
