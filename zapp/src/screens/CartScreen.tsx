@@ -1,20 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { getAuth } from "firebase/auth";
 import * as Notifications from "expo-notifications";
+import { getAuth } from "firebase/auth";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, FlatList, Image, ImageBackground, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, FlatList, Image, ImageBackground, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SHARED } from "../../constants/theme";
-import { CartItem } from "../../src/models/CartItem";
 import { cartService } from "../../services/cart_service";
-import { Platform } from "react-native";
+import { CartItem } from "../../src/models/CartItem";
+
 
 const FRETE_FIXO = 15.00;
 const CUPONS: Record<string, { tipo: "percentual"; valor: number }> = {
     "MINHAPRIMEIRAVEZ": { tipo: "percentual", valor: 10 },
 };
 
-// configura como a notificação aparece enquanto o app está aberto
+// configura como a notificação aparece enquanto o app está aberto (Android/iOS)
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
@@ -40,12 +40,17 @@ export default function CartScreen() {
         });
     };
 
-    // solicita permissão ao montar a tela
     useEffect(() => {
         solicitarPermissaoNotificacao();
     }, []);
 
     const solicitarPermissaoNotificacao = async () => {
+        if (Platform.OS === "web") {
+            if ("Notification" in window && Notification.permission === "default") {
+                await Notification.requestPermission();
+            }
+            return;
+        }
         const { status } = await Notifications.requestPermissionsAsync();
         if (status !== "granted") {
             console.log("Permissão de notificação negada.");
@@ -53,19 +58,41 @@ export default function CartScreen() {
     };
 
     const dispararNotificacao = async () => {
-    if (Platform.OS === "web") {
-        showToast("Pedido confirmado!");
-        return;
-    }
-    await Notifications.scheduleNotificationAsync({
-        content: {
-            title: "✅ Pedido confirmado!",
-            body: "Seus produtos foram confirmados no carrinho. Obrigado pela compra!",
-            sound: true,
-        },
-        trigger: null,
-    });
-};
+        if (Platform.OS === "web") {
+            if ("Notification" in window) {
+                if (Notification.permission === "granted") {
+                    new Notification("✅ Pedido confirmado!", {
+                        body: "Seus produtos foram confirmados no carrinho. Obrigado pela compra!",
+                        icon: "/assets/images/icon.png",
+                    });
+                } else if (Notification.permission === "default") {
+                    const permission = await Notification.requestPermission();
+                    if (permission === "granted") {
+                        new Notification("✅ Pedido confirmado!", {
+                            body: "Seus produtos foram confirmados no carrinho. Obrigado pela compra!",
+                            icon: "/assets/images/icon.png",
+                        });
+                    } else {
+                        showToast("Pedido confirmado! (permissão de notificação negada)");
+                    }
+                } else {
+                    showToast("Pedido confirmado! (notificações bloqueadas no navegador)");
+                }
+            } else {
+                showToast("Pedido confirmado!");
+            }
+            return;
+        }
+        // Android / iOS
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "✅ Pedido confirmado!",
+                body: "Seus produtos foram confirmados no carrinho. Obrigado pela compra!",
+                sound: true,
+            },
+            trigger: null,
+        });
+    };
 
     const loadCart = async () => {
         const user = getAuth().currentUser;
@@ -209,7 +236,6 @@ export default function CartScreen() {
                                     style={styles.flatList}
                                 />
 
-                                {/* Cupom */}
                                 {cupomAplicado ? (
                                     <View style={styles.cupomAplicadoRow}>
                                         <Ionicons name="pricetag-outline" size={16} color="#2e7d32" />
@@ -236,7 +262,6 @@ export default function CartScreen() {
                                 )}
                                 {cupomErro ? <Text style={styles.cupomErro}>{cupomErro}</Text> : null}
 
-                                {/* Totalização */}
                                 <View style={styles.totalizacao}>
                                     <View style={styles.totalRow}>
                                         <Text style={styles.totalLabel}>Subtotal</Text>
@@ -258,13 +283,11 @@ export default function CartScreen() {
                                     </View>
                                 </View>
 
-                                {/* Confirmar pedido */}
                                 <TouchableOpacity style={styles.confirmarBtn} onPress={handleConfirmarPedido}>
                                     <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
                                     <Text style={styles.confirmarBtnText}>CONFIRMAR E AVANÇAR</Text>
                                 </TouchableOpacity>
 
-                                {/* Limpar carrinho */}
                                 <TouchableOpacity style={styles.limparBtn} onPress={handleLimparCarrinho}>
                                     <Ionicons name="trash-outline" size={16} color="#cc0000" />
                                     <Text style={styles.limparBtnText}>Limpar Tudo</Text>
